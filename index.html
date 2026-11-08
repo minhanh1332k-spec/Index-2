@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Link4M Bypass Tool</title>
+    <style>
+        body { font-family: sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; text-align: center; }
+        input { width: 80%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 6px; }
+        button { padding: 12px 24px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 6px; font-size: 16px; }
+        button:hover { background: #0056b3; }
+        #result { margin-top: 20px; word-break: break-all; }
+        #result a { color: #28a745; font-weight: bold; }
+        .error { color: red; }
+        .loading { color: #666; }
+    </style>
+</head>
+<body>
+    <h2>🔓 Link4M Bypass</h2>
+    <p>Dán link link4m.com của bạn vào bên dưới:</p>
+    <input type="text" id="urlInput" placeholder="https://link4m.com/xxxxx" />
+    <br />
+    <button onclick="bypass()">Lấy Link Gốc</button>
+    <div id="result"></div>
+
+    <script>
+        async function bypass() {
+            const input = document.getElementById('urlInput').value.trim();
+            const resultDiv = document.getElementById('result');
+
+            if (!input.includes('link4m.com')) {
+                resultDiv.innerHTML = '<p class="error">Vui lòng nhập đúng link link4m.com</p>';
+                return;
+            }
+
+            resultDiv.innerHTML = '<p class="loading">Đang xử lý, vui lòng chờ...</p>';
+
+            try {
+                // Sử dụng proxy AllOrigins để vượt CORS và tải nội dung trang link4m
+                const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(input);
+                const response = await fetch(proxyUrl);
+
+                if (!response.ok) throw new Error('Không thể tải trang. Link có thể đã hết hạn hoặc proxy bị chặn.');
+
+                const html = await response.text();
+
+                // Tìm URL đích trong mã nguồn HTML (link4m thường chứa link trong các biến JS hoặc thẻ meta refresh)
+                // Regex dưới đây tìm các URL http/https không phải là link4m.com
+                const urlRegex = /(https?:\/\/(?!link4m\.com)[^\s"'<>]+)/g;
+                const matches = html.match(urlRegex);
+
+                if (matches && matches.length > 0) {
+                    // Lọc và lấy URL có vẻ là link đích (ưu tiên URL dài, không phải ảnh/script)
+                    const candidates = matches.filter(u => 
+                        !u.includes('.jpg') && !u.includes('.png') && !u.includes('.css') && !u.includes('.js') &&
+                        !u.includes('google') && !u.includes('facebook') && !u.includes('cloudflare')
+                    );
+                    const finalUrl = candidates.length > 0 ? candidates[0] : matches[0];
+
+                    resultDiv.innerHTML = `
+                        <p>✅ Link gốc tìm thấy:</p>
+                        <a href="${finalUrl}" target="_blank" rel="noopener">${finalUrl}</a>
+                    `;
+                } else {
+                    resultDiv.innerHTML = '<p class="error">Không tìm thấy link gốc trong trang. Link4m có thể đã thay đổi cấu trúc hoặc link đã hết hạn.</p>';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<p class="error">Lỗi: ${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>
